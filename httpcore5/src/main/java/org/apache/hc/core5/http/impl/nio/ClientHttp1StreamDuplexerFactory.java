@@ -30,6 +30,7 @@ package org.apache.hc.core5.http.impl.nio;
 import org.apache.hc.core5.annotation.Contract;
 import org.apache.hc.core5.annotation.Internal;
 import org.apache.hc.core5.annotation.ThreadingBehavior;
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.ConnectionReuseStrategy;
 import org.apache.hc.core5.http.ContentLengthStrategy;
 import org.apache.hc.core5.http.HttpRequest;
@@ -63,6 +64,27 @@ public final class ClientHttp1StreamDuplexerFactory {
     private final ContentLengthStrategy incomingContentStrategy;
     private final ContentLengthStrategy outgoingContentStrategy;
     private final Http1StreamListener streamListener;
+
+    private ByteTransferListener incomingByteTransferListener;
+    private ByteTransferListener outgoingByteTransferListener;
+
+    public ClientHttp1StreamDuplexerFactory(
+            final HttpProcessor httpProcessor,
+            final Http1Config http1Config,
+            final CharCodingConfig charCodingConfig,
+            final ConnectionReuseStrategy connectionReuseStrategy,
+            final NHttpMessageParserFactory<HttpResponse> responseParserFactory,
+            final NHttpMessageWriterFactory<HttpRequest> requestWriterFactory,
+            final ContentLengthStrategy incomingContentStrategy,
+            final ContentLengthStrategy outgoingContentStrategy,
+            final Http1StreamListener streamListener,
+            final ByteTransferListener incomingByteTransferListener,
+            final ByteTransferListener outgoingByteTransferListener
+    ) {
+        this(httpProcessor, http1Config, charCodingConfig, connectionReuseStrategy, responseParserFactory, requestWriterFactory, streamListener);
+        this.incomingByteTransferListener = incomingByteTransferListener;
+        this.outgoingByteTransferListener = outgoingByteTransferListener;
+    }
 
     public ClientHttp1StreamDuplexerFactory(
             final HttpProcessor httpProcessor,
@@ -128,7 +150,9 @@ public final class ClientHttp1StreamDuplexerFactory {
                 requestWriterFactory.create(),
                 incomingContentStrategy,
                 outgoingContentStrategy,
-                streamListener);
+                streamListener,
+                incomingByteTransferListener,
+                outgoingByteTransferListener);
     }
 
 }

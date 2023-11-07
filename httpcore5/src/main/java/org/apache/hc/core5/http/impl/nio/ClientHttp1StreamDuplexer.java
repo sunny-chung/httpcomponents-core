@@ -36,6 +36,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hc.core5.annotation.Internal;
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.ConnectionClosedException;
 import org.apache.hc.core5.http.ConnectionReuseStrategy;
 import org.apache.hc.core5.http.ContentLengthStrategy;
@@ -100,9 +101,13 @@ public class ClientHttp1StreamDuplexer extends AbstractHttp1StreamDuplexer<HttpR
             final NHttpMessageWriter<HttpRequest> outgoingMessageWriter,
             final ContentLengthStrategy incomingContentStrategy,
             final ContentLengthStrategy outgoingContentStrategy,
-            final Http1StreamListener streamListener) {
+            final Http1StreamListener streamListener,
+            final ByteTransferListener incomingByteTransferListener,
+            final ByteTransferListener outgoingByteTransferListener
+    ) {
         super(ioSession, http1Config, charCodingConfig, incomingMessageParser, outgoingMessageWriter,
-                incomingContentStrategy, outgoingContentStrategy);
+                incomingContentStrategy, outgoingContentStrategy,
+                incomingByteTransferListener, outgoingByteTransferListener);
         this.httpProcessor = Args.notNull(httpProcessor, "HTTP processor");
         this.http1Config = http1Config != null ? http1Config : Http1Config.DEFAULT;
         this.connectionReuseStrategy = connectionReuseStrategy != null ? connectionReuseStrategy :

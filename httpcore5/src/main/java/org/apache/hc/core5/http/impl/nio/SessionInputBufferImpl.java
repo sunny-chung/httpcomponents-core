@@ -36,6 +36,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.Chars;
 import org.apache.hc.core5.http.MessageConstraintException;
 import org.apache.hc.core5.http.nio.SessionInputBuffer;
@@ -49,6 +50,8 @@ class SessionInputBufferImpl extends ExpandableBuffer implements SessionInputBuf
     private final int maxLineLen;
 
     private CharBuffer charbuffer;
+
+    private ByteTransferListener byteTransferListener;
 
     /**
      *  Creates SessionInputBufferImpl instance.
@@ -110,6 +113,17 @@ class SessionInputBufferImpl extends ExpandableBuffer implements SessionInputBuf
         this(bufferSize, 256);
     }
 
+    public SessionInputBufferImpl(
+            final int bufferSize,
+            final int lineBuffersize,
+            final int maxLineLen,
+            final CharsetDecoder charDecoder,
+            final ByteTransferListener byteTransferListener
+    ) {
+        this(bufferSize, lineBuffersize, maxLineLen, charDecoder);
+        this.byteTransferListener = byteTransferListener;
+    }
+
     @Override
     public int length() {
         return super.length();
@@ -129,7 +143,12 @@ class SessionInputBufferImpl extends ExpandableBuffer implements SessionInputBuf
         if (src != null && src.hasRemaining()) {
             setInputMode();
             ensureAdjustedCapacity(buffer().position() + src.remaining());
+            final int position = buffer().position();
             buffer().put(src);
+            final int length = buffer().position() - position;
+            if (byteTransferListener != null && length > 0) {
+                byteTransferListener.onTransfer(buffer().array(), position, length);
+            }
         }
     }
 

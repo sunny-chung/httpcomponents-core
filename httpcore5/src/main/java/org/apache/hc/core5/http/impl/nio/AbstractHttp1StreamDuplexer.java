@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLSession;
 
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.ConnectionClosedException;
 import org.apache.hc.core5.http.ContentLengthStrategy;
 import org.apache.hc.core5.http.EndpointDetails;
@@ -112,15 +113,20 @@ abstract class AbstractHttp1StreamDuplexer<IncomingMessage extends HttpMessage, 
             final NHttpMessageParser<IncomingMessage> incomingMessageParser,
             final NHttpMessageWriter<OutgoingMessage> outgoingMessageWriter,
             final ContentLengthStrategy incomingContentStrategy,
-            final ContentLengthStrategy outgoingContentStrategy) {
+            final ContentLengthStrategy outgoingContentStrategy,
+            final ByteTransferListener incomingByteTransferListener,
+            final ByteTransferListener outgoingByteTransferListener
+    ) {
         this.ioSession = Args.notNull(ioSession, "I/O session");
         this.http1Config = http1Config != null ? http1Config : Http1Config.DEFAULT;
         final int bufferSize = this.http1Config.getBufferSize();
         this.inbuf = new SessionInputBufferImpl(bufferSize, Math.min(bufferSize, 512),
                 this.http1Config.getMaxLineLength(),
-                CharCodingSupport.createDecoder(charCodingConfig));
+                CharCodingSupport.createDecoder(charCodingConfig),
+                incomingByteTransferListener);
         this.outbuf = new SessionOutputBufferImpl(bufferSize, Math.min(bufferSize, 512),
-                CharCodingSupport.createEncoder(charCodingConfig));
+                CharCodingSupport.createEncoder(charCodingConfig),
+                outgoingByteTransferListener);
         this.inTransportMetrics = new BasicHttpTransportMetrics();
         this.outTransportMetrics = new BasicHttpTransportMetrics();
         this.connMetrics = new BasicHttpConnectionMetrics(inTransportMetrics, outTransportMetrics);

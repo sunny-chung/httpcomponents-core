@@ -105,7 +105,7 @@ public class ServerHttp1StreamDuplexer extends AbstractHttp1StreamDuplexer<HttpR
             final ContentLengthStrategy outgoingContentStrategy,
             final Http1StreamListener streamListener) {
         super(ioSession, http1Config, charCodingConfig, incomingMessageParser, outgoingMessageWriter,
-                incomingContentStrategy, outgoingContentStrategy);
+                incomingContentStrategy, outgoingContentStrategy, null, null);
         this.httpProcessor = Args.notNull(httpProcessor, "HTTP processor");
         this.exchangeHandlerFactory = Args.notNull(exchangeHandlerFactory, "Exchange handler factory");
         this.scheme = scheme;

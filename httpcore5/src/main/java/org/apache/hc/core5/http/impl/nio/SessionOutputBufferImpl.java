@@ -37,6 +37,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.Chars;
 import org.apache.hc.core5.http.nio.SessionOutputBuffer;
 import org.apache.hc.core5.util.Args;
@@ -50,6 +51,8 @@ class SessionOutputBufferImpl extends ExpandableBuffer implements SessionOutputB
     private final int lineBufferSize;
 
     private CharBuffer charbuffer;
+
+    private ByteTransferListener byteTransferListener;
 
     /**
      *  Creates SessionOutputBufferImpl instance.
@@ -90,6 +93,16 @@ class SessionOutputBufferImpl extends ExpandableBuffer implements SessionOutputB
         this(bufferSize, lineBufferSize, (CharsetEncoder) null);
     }
 
+    public SessionOutputBufferImpl(
+            final int bufferSize,
+            final int lineBufferSize,
+            final CharsetEncoder charEncoder,
+            final ByteTransferListener byteTransferListener
+    ) {
+        this(bufferSize, lineBufferSize, charEncoder);
+        this.byteTransferListener = byteTransferListener;
+    }
+
     /**
      * @since 4.3
      */
@@ -116,7 +129,11 @@ class SessionOutputBufferImpl extends ExpandableBuffer implements SessionOutputB
     public int flush(final WritableByteChannel channel) throws IOException {
         Args.notNull(channel, "Channel");
         setOutputMode();
-        return channel.write(buffer());
+        final int numBytesWritten = channel.write(buffer());
+        if (byteTransferListener != null && numBytesWritten > 0) {
+            byteTransferListener.onTransfer(buffer().array(), buffer().position() - numBytesWritten, numBytesWritten);
+        }
+        return numBytesWritten;
     }
 
     @Override

@@ -105,7 +105,8 @@ class InternalClientHttp1EventHandlerFactory implements IOEventHandlerFactory {
             final Http1StreamListener streamListener) {
         return new ClientHttp1StreamDuplexer(ioSession, httpProcessor, http1Config, charCodingConfig,
                 connectionReuseStrategy, incomingMessageParser, outgoingMessageWriter,
-                incomingContentStrategy, outgoingContentStrategy, streamListener);
+                incomingContentStrategy, outgoingContentStrategy, streamListener,
+                null, null);
     }
 
     @Override
