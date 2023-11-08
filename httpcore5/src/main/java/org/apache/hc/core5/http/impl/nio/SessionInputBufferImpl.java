@@ -159,7 +159,12 @@ class SessionInputBufferImpl extends ExpandableBuffer implements SessionInputBuf
         if (!buffer().hasRemaining()) {
             expand();
         }
-        return channel.read(buffer());
+        final int position = buffer().position();
+        final int numRead = channel.read(buffer());
+        if (byteTransferListener != null && numRead > 0) {
+            byteTransferListener.onTransfer(buffer().array(), position, numRead);
+        }
+        return numRead;
     }
 
     @Override
