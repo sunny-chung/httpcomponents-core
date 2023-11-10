@@ -26,7 +26,7 @@
  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.apache.httpcomponents.core5</groupId>
+    <groupId>io.github.sunny-chung</groupId>
     <artifactId>httpcore5-parent</artifactId>
     <version>5.2-inspect-patch1</version>
   </parent>
@@ -35,21 +35,25 @@
   <description>Apache HttpComponents HTTP/2 and HTTP/1.1 core component integration tests</description>
 
   <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
     <Automatic-Module-Name>org.apache.httpcomponents.core5.httpcore5.testing</Automatic-Module-Name>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.httpcomponents.core5</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>httpcore5</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents.core5</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>httpcore5-h2</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents.core5</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>httpcore5-reactive</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>

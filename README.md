@@ -19,37 +19,21 @@
 Apache HttpComponents Core
 ==========================
 
-Welcome to the HttpCore component of the Apache HttpComponents project.
+This is a patch, for fulfilling specific inspection requirement, of the [Apache HttpComponents Core](https://github.com/apache/httpcomponents-core) project.
 
-[![GitHub Actions Status](https://github.com/apache/httpcomponents-core/workflows/Java%20CI/badge.svg)](https://github.com/apache/httpcomponents-core/actions)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.httpcomponents.core5/httpcore5/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.apache.httpcomponents.core5/httpcore5)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+Usage
+-----
 
-Building Instructions
----------------------
-
-For building from source instructions please refer to [BUILDING.txt](./BUILDING.txt).
-
-Dependencies
-------------
-
-HttpCore requires Java 1.8 compatible runtime.
+```kotlin
+implementation("io.github.sunny-chung:httpcore5:5.2-inspect-patch1")
+implementation("io.github.sunny-chung:httpcore5-h2:5.2-inspect-patch1")
+```
 
 Licensing
 ---------
 
 Apache HttpComponents Core is licensed under the Apache License 2.0.
 See the files [LICENSE.txt](./LICENSE.txt) and [NOTICE.txt](./NOTICE.txt) for more information.
-
-Contact
--------
-
-- For general information visit the main project site at  
-  https://hc.apache.org/
-- For current status information visit the status page at  
-  https://hc.apache.org/status.html
-- If you want to contribute visit  
-  https://hc.apache.org/get-involved.html
 
 Cryptographic Software Notice
 -----------------------------

@@ -30,7 +30,7 @@
     <version>13</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.httpcomponents.core5</groupId>
+  <groupId>io.github.sunny-chung</groupId>
   <artifactId>httpcore5-parent</artifactId>
   <name>Apache HttpComponents Core Parent</name>
   <version>5.2-inspect-patch1</version>
@@ -52,11 +52,15 @@
   </scm>
 
   <distributionManagement>
-    <site>
-      <id>apache.website</id>
-      <name>Apache HttpComponents Website</name>
-      <url>scm:svn:https://svn.apache.org/repos/asf/httpcomponents/site/components/httpcomponents-core-5.2.x/LATEST/</url>
-    </site>
+<!--    <site>-->
+<!--      <id>apache.website</id>-->
+<!--      <name>Apache HttpComponents Website</name>-->
+<!--      <url>scm:svn:https://svn.apache.org/repos/asf/httpcomponents/site/components/httpcomponents-core-5.2.x/LATEST/</url>-->
+<!--    </site>-->
+    <repository>
+      <id>maven-sonatype</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
   </distributionManagement>
 
   <modules>
@@ -68,6 +72,7 @@
 
   <properties>
     <!-- Override parent 7 setting for deprecation (only - other settings stand)-->
+    <originalGroupId>org.apache.httpcomponents.core5</originalGroupId>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
@@ -163,12 +168,40 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>deploy</phase>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
+<!--        <configuration>-->
+<!--          <links>-->
+<!--            <link>${project.url}/httpcore5/apidocs/</link>-->
+<!--            <link>${project.url}/httpcore5-h2/apidocs/</link>-->
+<!--          </links>-->
+<!--        </configuration>-->
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <phase>deploy</phase>
+            <goals><goal>jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>3.0.1</version>
         <configuration>
-          <links>
-            <link>${project.url}/httpcore5/apidocs/</link>
-            <link>${project.url}/httpcore5-h2/apidocs/</link>
-          </links>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <useReleaseProfile>false</useReleaseProfile>
+          <releaseProfiles>release</releaseProfiles>
+          <goals>deploy</goals>
         </configuration>
       </plugin>
       <plugin>
@@ -201,7 +234,7 @@
         <configuration>
           <oldVersion>
             <dependency>
-              <groupId>${project.groupId}</groupId>
+              <groupId>${originalGroupId}</groupId>
               <artifactId>${project.artifactId}</artifactId>
               <version>${api.comparison.version}</version>
               <type>jar</type>
@@ -337,7 +370,7 @@
         <configuration>
           <oldVersion>
             <dependency>
-              <groupId>${project.groupId}</groupId>
+              <groupId>${originalGroupId}</groupId>
               <artifactId>${project.artifactId}</artifactId>
               <version>${api.comparison.version}</version>
               <type>jar</type>
@@ -364,5 +397,28 @@
       </plugin>
     </plugins>
   </reporting>
+
+  <profiles>
+    <profile>
+      <id>release-sonatype</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
