@@ -43,23 +43,25 @@ import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.util.Args;
 import org.apache.hc.core5.util.ByteArrayBuffer;
 
+import static org.apache.hc.core5.http2.hpack.HPackInspectHeader.PSEUDO_HEADER_KEY_DYNAMIC_TABLE_SIZE_UPDATE;
+
 /**
  * HPACK decoder.
  *
  * @since 5.0
  */
 @Internal
-public final class HPackDecoder {
+public class HPackDecoder {
 
     private static final String UNEXPECTED_EOS = "Unexpected end of HPACK data";
     private static final String MAX_LIMIT_EXCEEDED = "Max integer exceeded";
 
-    private final InboundDynamicTable dynamicTable;
-    private final ByteArrayBuffer contentBuf;
-    private final CharsetDecoder charsetDecoder;
-    private CharBuffer tmpBuf;
-    private int maxTableSize;
-    private int maxListSize;
+    protected final InboundDynamicTable dynamicTable;
+    protected final ByteArrayBuffer contentBuf;
+    protected final CharsetDecoder charsetDecoder;
+    protected CharBuffer tmpBuf;
+    protected int maxTableSize;
+    protected int maxListSize;
 
     HPackDecoder(final InboundDynamicTable dynamicTable, final CharsetDecoder charsetDecoder) {
         this.dynamicTable = dynamicTable != null ? dynamicTable : new InboundDynamicTable();
@@ -248,7 +250,7 @@ public final class HPackDecoder {
         if (representation == HPackRepresentation.WITH_INDEXING) {
             this.dynamicTable.add(header);
         }
-        return header;
+        return new HPackInspectHeader(header, HPackInspectHeader.Format.fromLiteralRepresentation(representation), index);
     }
 
     HPackHeader decodeIndexedHeader(final ByteBuffer src) throws HPackException {
@@ -258,7 +260,7 @@ public final class HPackDecoder {
         if (existing == null) {
             throw new HPackException("Invalid header index");
         }
-        return existing;
+        return new HPackInspectHeader(existing, HPackInspectHeader.Format.INDEXED, index);
     }
 
     public Header decodeHeader(final ByteBuffer src) throws HPackException {
@@ -281,6 +283,7 @@ public final class HPackDecoder {
                 } else if ((b & 0xe0) == 0x20) {
                     final int maxSize = decodeInt(src, 5);
                     this.dynamicTable.setMaxSize(Math.min(this.maxTableSize, maxSize));
+                    return new HPackInspectHeader(PSEUDO_HEADER_KEY_DYNAMIC_TABLE_SIZE_UPDATE, "" + maxSize, false, HPackInspectHeader.Format.OTHER, maxSize);
                 } else {
                     throw new HPackException("Unexpected header first byte: 0x" + Integer.toHexString(b));
                 }
@@ -307,7 +310,8 @@ public final class HPackDecoder {
                     throw new HeaderListConstraintException("Maximum header list size exceeded");
                 }
             }
-            list.add(new BasicHeader(header.getName(), header.getValue(), header.isSensitive()));
+//            list.add(new BasicHeader(header.getName(), header.getValue(), header.isSensitive()));
+            list.add(header);
         }
         return list;
     }

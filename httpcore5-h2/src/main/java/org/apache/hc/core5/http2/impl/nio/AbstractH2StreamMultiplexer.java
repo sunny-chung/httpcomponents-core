@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
@@ -78,6 +79,7 @@ import org.apache.hc.core5.http2.frame.RawFrame;
 import org.apache.hc.core5.http2.frame.StreamIdGenerator;
 import org.apache.hc.core5.http2.hpack.HPackDecoder;
 import org.apache.hc.core5.http2.hpack.HPackEncoder;
+import org.apache.hc.core5.http2.hpack.HPackInspectHeader;
 import org.apache.hc.core5.http2.impl.BasicH2TransportMetrics;
 import org.apache.hc.core5.http2.nio.AsyncPingHandler;
 import org.apache.hc.core5.http2.nio.command.PingCommand;
@@ -118,6 +120,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
     private final AtomicInteger outputRequests;
     private final AtomicInteger lastStreamId;
     private final H2StreamListener streamListener;
+    private final H2InspectListener inspectListener;
 
     private ConnectionHandshake connState = ConnectionHandshake.READY;
     private SettingsHandshake localSettingState = SettingsHandshake.READY;
@@ -142,7 +145,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             final HttpProcessor httpProcessor,
             final CharCodingConfig charCodingConfig,
             final H2Config h2Config,
-            final H2StreamListener streamListener) {
+            final H2StreamListener streamListener,
+            final H2InspectListener inspectListener
+    ) {
         this.ioSession = Args.notNull(ioSession, "IO session");
         this.frameFactory = Args.notNull(frameFactory, "Frame factory");
         this.idGenerator = Args.notNull(idGenerator, "Stream id generator");
@@ -173,6 +178,11 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
 
         this.lowMark = H2Config.INIT.getInitialWindowSize() / 2;
         this.streamListener = streamListener;
+        this.inspectListener = inspectListener;
+    }
+
+    public Integer wrapStreamId(final int streamId) {
+        return streamId > 0 ? streamId : null;
     }
 
     @Override
@@ -242,6 +252,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             if (streamListener != null) {
                 streamListener.onFrameOutput(this, frame.getStreamId(), frame);
             }
+            if (inspectListener != null) {
+                inspectListener.onFrameOutput(this, wrapStreamId(frame.getStreamId()), frame);
+            }
             outputBuffer.write(frame, ioSession);
         } else {
             outputQueue.addLast(frame);
@@ -265,7 +278,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             streamListener.onHeaderOutput(this, streamId, headers);
         }
         final ByteArrayBuffer buf = new ByteArrayBuffer(512);
-        hPackEncoder.encodeHeaders(buf, headers, localConfig.isCompressionEnabled());
+        final List<HPackInspectHeader> encoded = hPackEncoder.encodeHeaders(buf, headers, localConfig.isCompressionEnabled());
 
         int off = 0;
         int remaining = buf.length();
@@ -287,6 +300,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 frame = frameFactory.createContinuation(streamId, payload, endHeaders);
             }
             commitFrameInternal(frame);
+            if (inspectListener != null) {
+                inspectListener.onHeaderOutputEncoded(this, wrapStreamId(streamId), encoded);
+            }
         }
     }
 
@@ -304,7 +320,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         buf.append((byte)(promisedStreamId >> 8));
         buf.append((byte)(promisedStreamId));
 
-        hPackEncoder.encodeHeaders(buf, headers, localConfig.isCompressionEnabled());
+        final List<HPackInspectHeader> encoded = hPackEncoder.encodeHeaders(buf, headers, localConfig.isCompressionEnabled());
 
         int off = 0;
         int remaining = buf.length();
@@ -327,6 +343,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             }
             commitFrameInternal(frame);
         }
+        if (inspectListener != null) {
+            inspectListener.onHeaderOutputEncoded(this, wrapStreamId(streamId), encoded);
+        }
     }
 
     private void streamDataFrame(
@@ -337,6 +356,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         final RawFrame dataFrame = frameFactory.createData(streamId, payload, false);
         if (streamListener != null) {
             streamListener.onFrameOutput(this, streamId, dataFrame);
+        }
+        if (inspectListener != null) {
+            inspectListener.onFrameOutput(this, wrapStreamId(streamId), dataFrame);
         }
         updateOutputWindow(0, connOutputWindow, -chunk);
         updateOutputWindow(streamId, streamOutputWindow, -chunk);
@@ -442,6 +464,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 if (streamListener != null) {
                     streamListener.onFrameInput(this, frame.getStreamId(), frame);
                 }
+                if (inspectListener != null) {
+                    inspectListener.onFrameInput(this, wrapStreamId(frame.getStreamId()), frame);
+                }
                 consumeFrame(frame);
             }
         }
@@ -458,6 +483,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 if (frame != null) {
                     if (streamListener != null) {
                         streamListener.onFrameOutput(this, frame.getStreamId(), frame);
+                    }
+                    if (inspectListener != null) {
+                        inspectListener.onFrameOutput(this, wrapStreamId(frame.getStreamId()), frame);
                     }
                     outputBuffer.write(frame, ioSession);
                 } else {
@@ -1060,14 +1088,18 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             continuation = new Continuation(promisedStreamId, frame.getType(), true);
         }
         if (continuation == null) {
-            final List<Header> headers = hPackDecoder.decodeHeaders(payload);
+            final List<? extends Header> headers = hPackDecoder.decodeHeaders(payload);
+            final List<? extends Header> realHeaders = headers.stream().filter(it -> !it.getName().startsWith(":::")).collect(Collectors.toList());
             if (promisedStreamId > processedRemoteStreamId) {
                 processedRemoteStreamId = promisedStreamId;
             }
             if (streamListener != null) {
-                streamListener.onHeaderInput(this, promisedStreamId, headers);
+                streamListener.onHeaderInput(this, promisedStreamId, realHeaders);
             }
-            promisedStream.consumePromise(headers);
+            if (inspectListener != null) {
+                inspectListener.onHeaderInputDecoded(this, wrapStreamId(promisedStreamId), (List<HPackInspectHeader>) headers);
+            }
+            promisedStream.consumePromise((List<Header>) realHeaders);
         } else {
             continuation.copyPayload(payload);
         }
@@ -1089,12 +1121,16 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             payload.get();
         }
         if (continuation == null) {
-            final List<Header> headers = decodeHeaders(payload);
+            final List<? extends Header> headers = decodeHeaders(payload);
+            final List<? extends Header> realHeaders = headers.stream().filter(it -> !it.getName().startsWith(":::")).collect(Collectors.toList());
             if (stream.isRemoteInitiated() && streamId > processedRemoteStreamId) {
                 processedRemoteStreamId = streamId;
             }
             if (streamListener != null) {
-                streamListener.onHeaderInput(this, streamId, headers);
+                streamListener.onHeaderInput(this, streamId, realHeaders);
+            }
+            if (inspectListener != null) {
+                inspectListener.onHeaderInputDecoded(this, wrapStreamId(streamId), (List<HPackInspectHeader>) headers);
             }
             if (stream.isRemoteClosed()) {
                 throw new H2StreamResetException(H2Error.STREAM_CLOSED, "Stream already closed");
@@ -1105,7 +1141,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             if (frame.isFlagSet(FrameFlag.END_STREAM)) {
                 stream.setRemoteEndStream();
             }
-            stream.consumeHeader(headers);
+            stream.consumeHeader((List<Header>) realHeaders);
         } else {
             continuation.copyPayload(payload);
         }
@@ -1116,12 +1152,16 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         final ByteBuffer payload = frame.getPayload();
         continuation.copyPayload(payload);
         if (frame.isFlagSet(FrameFlag.END_HEADERS)) {
-            final List<Header> headers = decodeHeaders(continuation.getContent());
+            final List<? extends Header> headers = decodeHeaders(continuation.getContent());
+            final List<? extends Header> realHeaders = headers.stream().filter(it -> !it.getName().startsWith(":::")).collect(Collectors.toList());
             if (stream.isRemoteInitiated() && streamId > processedRemoteStreamId) {
                 processedRemoteStreamId = streamId;
             }
             if (streamListener != null) {
-                streamListener.onHeaderInput(this, streamId, headers);
+                streamListener.onHeaderInput(this, streamId, realHeaders);
+            }
+            if (inspectListener != null) {
+                inspectListener.onHeaderInputDecoded(this, wrapStreamId(streamId), (List<HPackInspectHeader>) headers);
             }
             if (stream.isRemoteClosed()) {
                 throw new H2StreamResetException(H2Error.STREAM_CLOSED, "Stream already closed");
@@ -1133,9 +1173,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 stream.setRemoteEndStream();
             }
             if (continuation.type == FrameType.PUSH_PROMISE.getValue()) {
-                stream.consumePromise(headers);
+                stream.consumePromise((List<Header>) realHeaders);
             } else {
-                stream.consumeHeader(headers);
+                stream.consumeHeader((List<Header>) realHeaders);
             }
             continuation = null;
         }

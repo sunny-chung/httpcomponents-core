@@ -65,8 +65,10 @@ public class ClientH2StreamMultiplexer extends AbstractH2StreamMultiplexer {
             final HandlerFactory<AsyncPushConsumer> pushHandlerFactory,
             final H2Config h2Config,
             final CharCodingConfig charCodingConfig,
-            final H2StreamListener streamListener) {
-        super(ioSession, frameFactory, StreamIdGenerator.ODD, httpProcessor, charCodingConfig, h2Config, streamListener);
+            final H2StreamListener streamListener,
+            final H2InspectListener inspectListener
+    ) {
+        super(ioSession, frameFactory, StreamIdGenerator.ODD, httpProcessor, charCodingConfig, h2Config, streamListener, inspectListener);
         this.pushHandlerFactory = pushHandlerFactory;
     }
 
@@ -76,7 +78,7 @@ public class ClientH2StreamMultiplexer extends AbstractH2StreamMultiplexer {
             final HandlerFactory<AsyncPushConsumer> pushHandlerFactory,
             final H2Config h2Config,
             final CharCodingConfig charCodingConfig) {
-        this(ioSession, DefaultFrameFactory.INSTANCE, httpProcessor, pushHandlerFactory, h2Config, charCodingConfig, null);
+        this(ioSession, DefaultFrameFactory.INSTANCE, httpProcessor, pushHandlerFactory, h2Config, charCodingConfig, null, null);
     }
 
     public ClientH2StreamMultiplexer(

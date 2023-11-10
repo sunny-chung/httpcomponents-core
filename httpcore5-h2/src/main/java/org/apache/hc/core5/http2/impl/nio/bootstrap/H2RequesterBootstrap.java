@@ -319,7 +319,8 @@ public class H2RequesterBootstrap {
                 new DefaultAsyncPushConsumerFactory(registry),
                 h2Config != null ? h2Config : H2Config.DEFAULT,
                 charCodingConfig != null ? charCodingConfig : CharCodingConfig.DEFAULT,
-                streamListener);
+                streamListener,
+                null);
 
         final TlsStrategy actualTlsStrategy = tlsStrategy != null ? tlsStrategy : new H2ClientTlsStrategy();
 

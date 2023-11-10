@@ -34,6 +34,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -192,13 +193,13 @@ public final class HPackEncoder {
         return encodeString(dst, s, 0, s.length(), huffman);
     }
 
-    void encodeLiteralHeader(
+    HPackInspectHeader encodeLiteralHeader(
             final ByteArrayBuffer dst, final HPackEntry existing, final Header header,
             final HPackRepresentation representation, final boolean useHuffman) throws CharacterCodingException {
-        encodeLiteralHeader(dst, existing, header.getName(), header.getValue(), header.isSensitive(), representation, useHuffman);
+        return encodeLiteralHeader(dst, existing, header.getName(), header.getValue(), header.isSensitive(), representation, useHuffman);
     }
 
-    void encodeLiteralHeader(
+    HPackInspectHeader encodeLiteralHeader(
             final ByteArrayBuffer dst, final HPackEntry existing, final String key, final String value, final boolean sensitive,
             final HPackRepresentation representation, final boolean useHuffman) throws CharacterCodingException {
 
@@ -233,6 +234,7 @@ public final class HPackEncoder {
         if (representation == HPackRepresentation.WITH_INDEXING) {
             dynamicTable.add(new HPackHeader(key, nameLen, value, valueLen, sensitive));
         }
+        return new HPackInspectHeader(key, nameLen, value, valueLen, sensitive, HPackInspectHeader.Format.fromLiteralRepresentation(representation), index);
     }
 
     void encodeIndex(final ByteArrayBuffer dst, final int index) {
@@ -252,13 +254,13 @@ public final class HPackEncoder {
         return 0;
     }
 
-    void encodeHeader(
+    HPackInspectHeader encodeHeader(
             final ByteArrayBuffer dst, final Header header,
             final boolean noIndexing, final boolean useHuffman) throws CharacterCodingException {
-        encodeHeader(dst, header.getName(), header.getValue(), header.isSensitive(), noIndexing, useHuffman);
+        return encodeHeader(dst, header.getName(), header.getValue(), header.isSensitive(), noIndexing, useHuffman);
     }
 
-    void encodeHeader(
+    HPackInspectHeader encodeHeader(
             final ByteArrayBuffer dst, final String name, final String value, final boolean sensitive,
             final boolean noIndexing, final boolean useHuffman) throws CharacterCodingException {
 
@@ -278,13 +280,13 @@ public final class HPackEncoder {
             final int staticIndex = findFullMatch(staticEntries, value);
             if (staticIndex > 0) {
                 encodeIndex(dst, staticIndex);
-                return;
+                return new HPackInspectHeader(name, value, sensitive, HPackInspectHeader.Format.INDEXED, staticIndex);
             }
             final List<HPackEntry> dynamicEntries = dynamicTable.getByName(name);
             final int dynamicIndex = findFullMatch(dynamicEntries, value);
             if (dynamicIndex > 0) {
                 encodeIndex(dst, dynamicIndex);
-                return;
+                return new HPackInspectHeader(name, value, sensitive, HPackInspectHeader.Format.INDEXED, dynamicIndex);
             }
         }
         // Encode as literal
@@ -297,36 +299,39 @@ public final class HPackEncoder {
                 existing = dynamicEntries.get(0);
             }
         }
-        encodeLiteralHeader(dst, existing, name, value, sensitive, representation, useHuffman);
+        return encodeLiteralHeader(dst, existing, name, value, sensitive, representation, useHuffman);
     }
 
-    void encodeHeaders(
+    List<HPackInspectHeader> encodeHeaders(
             final ByteArrayBuffer dst, final List<? extends Header> headers,
             final boolean noIndexing, final boolean useHuffman) throws CharacterCodingException {
+        final List<HPackInspectHeader> returnHeaders = new ArrayList<>(headers.size());
         for (int i = 0; i < headers.size(); i++) {
-            encodeHeader(dst, headers.get(i), noIndexing, useHuffman);
+            final HPackInspectHeader inspected = encodeHeader(dst, headers.get(i), noIndexing, useHuffman);
+            returnHeaders.add(inspected);
         }
+        return returnHeaders;
     }
 
-    public void encodeHeader(
+    public HPackInspectHeader encodeHeader(
             final ByteArrayBuffer dst, final Header header) throws CharacterCodingException {
         Args.notNull(dst, "ByteArrayBuffer");
         Args.notNull(header, "Header");
-        encodeHeader(dst, header.getName(), header.getValue(), header.isSensitive());
+        return encodeHeader(dst, header.getName(), header.getValue(), header.isSensitive());
     }
 
-    public void encodeHeader(
+    public HPackInspectHeader encodeHeader(
             final ByteArrayBuffer dst, final String name, final String value, final boolean sensitive) throws CharacterCodingException {
         Args.notNull(dst, "ByteArrayBuffer");
         Args.notEmpty(name, "Header name");
-        encodeHeader(dst, name, value, sensitive, false, true);
+        return encodeHeader(dst, name, value, sensitive, false, true);
     }
 
-    public void encodeHeaders(
+    public List<HPackInspectHeader> encodeHeaders(
             final ByteArrayBuffer dst, final List<? extends Header> headers, final boolean useHuffman) throws CharacterCodingException {
         Args.notNull(dst, "ByteArrayBuffer");
         Args.notEmpty(headers, "Header list");
-        encodeHeaders(dst, headers, false, useHuffman);
+        return encodeHeaders(dst, headers, false, useHuffman);
     }
 
     public int getMaxTableSize() {

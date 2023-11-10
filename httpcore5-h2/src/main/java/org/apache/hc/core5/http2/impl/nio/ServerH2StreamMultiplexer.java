@@ -72,7 +72,7 @@ public class ServerH2StreamMultiplexer extends AbstractH2StreamMultiplexer {
             final CharCodingConfig charCodingConfig,
             final H2Config h2Config,
             final H2StreamListener streamListener) {
-        super(ioSession, frameFactory, StreamIdGenerator.EVEN, httpProcessor, charCodingConfig, h2Config, streamListener);
+        super(ioSession, frameFactory, StreamIdGenerator.EVEN, httpProcessor, charCodingConfig, h2Config, streamListener, null);
         this.exchangeHandlerFactory = Args.notNull(exchangeHandlerFactory, "Handler factory");
     }
 

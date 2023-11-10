@@ -33,7 +33,7 @@ import org.apache.hc.core5.http.Header;
  * Internal HPack header representation that also contains binary length of
  * header name and header value.
  */
-final class HPackHeader implements Header {
+class HPackHeader implements Header {
 
     static private final int ENTRY_SIZE_OVERHEAD = 32;
 
