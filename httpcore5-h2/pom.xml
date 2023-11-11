@@ -28,7 +28,7 @@
   <parent>
     <groupId>io.github.sunny-chung</groupId>
     <artifactId>httpcore5-parent</artifactId>
-    <version>5.2-inspect-patch1</version>
+    <version>5.2-inspect-patch2</version>
   </parent>
   <artifactId>httpcore5-h2</artifactId>
   <name>Apache HttpComponents Core HTTP/2</name>

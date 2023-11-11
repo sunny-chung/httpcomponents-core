@@ -25,8 +25,8 @@ Usage
 -----
 
 ```kotlin
-implementation("io.github.sunny-chung:httpcore5:5.2-inspect-patch1")
-implementation("io.github.sunny-chung:httpcore5-h2:5.2-inspect-patch1")
+implementation("io.github.sunny-chung:httpcore5:5.2-inspect-patch2")
+implementation("io.github.sunny-chung:httpcore5-h2:5.2-inspect-patch2")
 ```
 
 Licensing
