@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hc.core5.annotation.Internal;
 import org.apache.hc.core5.concurrent.FutureCallback;
+import org.apache.hc.core5.function.ByteTransferListener;
 import org.apache.hc.core5.http.impl.nio.BufferedData;
 import org.apache.hc.core5.http2.ssl.ApplicationProtocol;
 import org.apache.hc.core5.reactor.IOSession;
@@ -65,11 +66,13 @@ public class ClientH2PrefaceHandler extends PrefaceHandlerBase {
     private volatile ByteBuffer preface;
     private volatile BufferedData inBuf;
 
+    private final ByteTransferListener outgoingByteTransferListener;
+
     public ClientH2PrefaceHandler(
             final ProtocolIOSession ioSession,
             final ClientH2StreamMultiplexerFactory http2StreamHandlerFactory,
             final boolean strictALPNHandshake) {
-        this(ioSession, http2StreamHandlerFactory, strictALPNHandshake, null);
+        this(ioSession, http2StreamHandlerFactory, strictALPNHandshake, null, null);
     }
 
     /**
@@ -79,11 +82,14 @@ public class ClientH2PrefaceHandler extends PrefaceHandlerBase {
             final ProtocolIOSession ioSession,
             final ClientH2StreamMultiplexerFactory http2StreamHandlerFactory,
             final boolean strictALPNHandshake,
-            final FutureCallback<ProtocolIOSession> resultCallback) {
+            final FutureCallback<ProtocolIOSession> resultCallback,
+            final ByteTransferListener outgoingByteTransferListener
+    ) {
         super(ioSession, resultCallback);
         this.http2StreamHandlerFactory = Args.notNull(http2StreamHandlerFactory, "HTTP/2 stream handler factory");
         this.strictALPNHandshake = strictALPNHandshake;
         this.initialized = new AtomicBoolean();
+        this.outgoingByteTransferListener = outgoingByteTransferListener;
     }
 
     private void initialize() throws IOException {
@@ -106,7 +112,12 @@ public class ClientH2PrefaceHandler extends PrefaceHandlerBase {
 
     private void writeOutPreface(final IOSession session) throws IOException  {
         if (preface.hasRemaining()) {
+            final int position = preface.position();
             session.write(preface);
+            final int newPosition = preface.position();
+            if (outgoingByteTransferListener != null && newPosition - position > 0) {
+                outgoingByteTransferListener.onTransfer(preface.array(), position, newPosition - position);
+            }
         }
         if (!preface.hasRemaining()) {
             session.clearEvent(SelectionKey.OP_WRITE);

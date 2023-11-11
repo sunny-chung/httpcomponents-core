@@ -104,7 +104,7 @@ class InternalClientProtocolNegotiationStarter implements IOEventHandlerFactory 
                 LoggingH2StreamListener.INSTANCE,
                 null);
         ioSession.registerProtocol(ApplicationProtocol.HTTP_1_1.id, new ClientHttp1UpgradeHandler(http1StreamHandlerFactory));
-        ioSession.registerProtocol(ApplicationProtocol.HTTP_2.id, new ClientH2UpgradeHandler(http2StreamHandlerFactory));
+        ioSession.registerProtocol(ApplicationProtocol.HTTP_2.id, new ClientH2UpgradeHandler(http2StreamHandlerFactory, null));
 
         switch (versionPolicy) {
             case FORCE_HTTP_2:
